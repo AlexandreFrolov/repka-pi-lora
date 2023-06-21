@@ -73,7 +73,7 @@ def gpio_init ():
     GPIO.setup(M1,GPIO.OUT)
     GPIO.output(M0,GPIO.HIGH)
     GPIO.output(M1,GPIO.HIGH)
-    time.sleep(0.1)
+    time.sleep(1)
 
     #ser = serial.Serial("/dev/serial0", 9600)
     ser = serial.Serial("/dev/ttyS0", 9600)
@@ -85,13 +85,14 @@ def gpio_cleanup():
 
 def wait_for_serial_data(serial):
     while serial.inWaiting() <= 0:
-        sleep(0.04)
+        sleep(0.4)
 
 def e32_get_config():
     try :
      if ser.isOpen() :
       wait_for_aux_pin()
       ser.write(b'\xC1\xC1\xC1')
+      sleep(1)
     except :
      if ser.isOpen() :
       ser.close()
@@ -101,7 +102,7 @@ def e32_get_config():
     if ser.inWaiting() > 0:
         wait_for_serial_data(ser)
         received_data = ser.read(6)
-        sleep(0.03)
+        sleep(1)
     return received_data
 
 ser = gpio_init()
