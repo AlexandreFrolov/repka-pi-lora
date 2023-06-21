@@ -83,6 +83,10 @@ def gpio_init ():
 def gpio_cleanup():
     GPIO.cleanup()
 
+def wait_for_serial_data(serial):
+    while serial.inWaiting() <= 0:
+        sleep(0.04)
+
 def e32_get_config():
     try :
      if ser.isOpen() :
@@ -94,8 +98,10 @@ def e32_get_config():
       GPIO.cleanup()
 
     wait_for_aux_pin()
-    received_data = ser.read(6)
-    sleep(0.03)
+    if ser.inWaiting() > 0:
+        wait_for_serial_data(ser)
+        received_data = ser.read(6)
+        sleep(0.03)
     return received_data
 
 ser = gpio_init()
