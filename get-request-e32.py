@@ -32,10 +32,10 @@ from time import sleep
 import json
 import subprocess
 
-NODE_ADDR_CHAN = [b'\x00\x0B\x0F',
-                  b'\x00\x0C\x0F',
-                  b'\x00\x0D\x0F',
-                  b'\x00\x0E\x0F']
+#NODE_ADDR_CHAN = [b'\x00\x0B\x0F',
+#                  b'\x00\x0C\x0F',
+#                  b'\x00\x0D\x0F',
+#                  b'\x00\x0E\x0F']
 
 def wait_for_aux_pin():
     AUX = 18
@@ -107,13 +107,5 @@ def wait_for_cmd(ser, address):
             GPIO.cleanup()
     return
 
-print(serial.__version__)
-
 ser = gpio_init()
-
-temperature_data = get_sensor_temperatures()
-print(temperature_data.encode())
-s_data = temperature_data.encode()
-print(s_data)
-
 wait_for_cmd(ser, b'\x00\x0E\x0F')
