@@ -32,7 +32,6 @@ from time import sleep
 import json
 import subprocess
 
-
 NODE_ADDR_CHAN = [b'\x00\x0B\x0F',
                   b'\x00\x0C\x0F',
                   b'\x00\x0D\x0F',
@@ -44,7 +43,6 @@ def wait_for_aux_pin():
         sleep(0.04)
         
 def gpio_init ():
-#    GPIO.setboard(GPIO.REPKAPI3)
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
     M0 = 22
@@ -79,7 +77,7 @@ def get_sensor_temperatures():
         gpu_temp = 0
     return f"{int(cpu_temp)};{int(gpu_temp)}       \r\n"
         
-def wait_for_cmd(address):
+def wait_for_cmd(ser, address):
     print('return data to node: ' + str(address))
     try :
         while True:
@@ -97,7 +95,6 @@ def wait_for_cmd(address):
                 temperature_data = get_sensor_temperatures()
                 print(temperature_data.encode())
                 s_data = temperature_data.encode()
-#                s_data = '111;222     \r\n'.encode()
                 if ser.isOpen() :
                     wait_for_aux_pin()
                     ser.write(address)
@@ -119,6 +116,4 @@ print(temperature_data.encode())
 s_data = temperature_data.encode()
 print(s_data)
 
-
-
-wait_for_cmd(b'\x00\x0E\x0F')
+wait_for_cmd(ser, b'\x00\x0E\x0F')
