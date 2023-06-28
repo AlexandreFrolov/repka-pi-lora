@@ -36,11 +36,12 @@ NODE_ADDR_CHAN = [b'\x00\x0B\x0F',
 
 
 def gpio_init ():
-#    GPIO.setboard(GPIO.REPKAPI3)
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
     M0 = 22
     M1 = 27
+    AUX = 18
+    GPIO.setup(AUX,GPIO.IN)    
     GPIO.setup(M0,GPIO.OUT)
     GPIO.setup(M1,GPIO.OUT)
     GPIO.output(M0,GPIO.LOW)
@@ -51,19 +52,25 @@ def gpio_init ():
         ser = serial.Serial("/dev/ttyS0", 9600, timeout=1)
     elif board_type == 'Raspberry Pi':
         ser = serial.Serial("/dev/serial0", 9600, timeout=1)
-    
     ser.flushInput()
-#    print(ser.name)
     return ser
+
+def wait_for_aux_pin():
+    AUX = 18
+    while not GPIO.input(AUX):
+        sleep(0.04)
 
 def wait_for_serial_data(serial):
     while serial.inWaiting() == 0:
         sleep(0.4)
 
+
 def send_cmd(address):
     try :
         if ser.isOpen() :
+            wait_for_aux_pin()
             ser.write(address)
+            wait_for_aux_pin()
             ser.write('getData \n'.encode())
     except :
         if ser.isOpen() :
@@ -72,8 +79,10 @@ def send_cmd(address):
 
     print('Sended to :' + str(address))
     
+    wait_for_aux_pin()
     received_data = ser.readline()
     sleep(0.05)
+    wait_for_aux_pin()
     data_left = ser.inWaiting() 
     received_data += ser.read(data_left)
 
@@ -81,27 +90,23 @@ def send_cmd(address):
     print('Received: ' + received_data.decode('utf-8') + "\n")
     
     node_data = rec.split(';')
-    
-    print(node_data)
-    
     return node_data
 
 def format_node_data(node, node_data):
-    NODE_1_2_ITEMS = ['Температура',
+    NODE_1_ITEMS = ['Температура',
                   'Давление',
                   'Влажность',
                   'Точка росы']
-    NODE_3_ITEMS = ['Температура CPU',
-                  'Температура GPU',
-                  'Резерв']
+    NODE_2_3_ITEMS = ['Температура CPU',
+                  'Температура GPU']
     node_dict={}
     i=0
     for val in node_data:
         val = str(val)
-        if(node == 0 or node == 1):
-            node_dict[NODE_1_2_ITEMS[i]]= val
+        if(node == 1):
+            node_dict[NODE_1_ITEMS[i]]= val
         else:
-            node_dict[NODE_3_ITEMS[i]]= val
+            node_dict[NODE_2_3_ITEMS[i]]= val
         i = i+1
     return node_dict
 
@@ -122,7 +127,6 @@ def save_nodes_data_to_file(nodes_dict):
     with open('hosts_data.json', 'w') as f:
         json.dump(nodes_dict, f, indent=2, ensure_ascii=False)
 
-# print(serial.__version__)
 ser = gpio_init()
 nodes_dict = get_nodes_data()
 save_nodes_data_to_file(nodes_dict)
