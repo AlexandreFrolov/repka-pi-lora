@@ -1,8 +1,28 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 
-#import RPi.GPIO as GPIO
-import RepkaPi.GPIO as GPIO
+def get_board_type():
+    try:
+        with open('/proc/device-tree/model', 'r') as f:
+            model = f.read().strip()
+            if 'Raspberry Pi' in model:
+                return 'Raspberry Pi'
+            elif 'Repka-Pi' in model:
+                return 'Repka-Pi'
+            else:
+                return 'Unknown'
+    except IOError:
+        return 'Unknown'
+
+board_type = get_board_type()
+
+if board_type == 'Repka-Pi':
+    import RepkaPi.GPIO as GPIO
+    GPIO.setboard(GPIO.REPKAPI3)
+elif board_type == 'Raspberry Pi':
+    import RPi.GPIO as GPIO
+print('Работает на платформе: ' + board_type + "\n")
+
 import serial
 import time
 import sys
@@ -62,7 +82,6 @@ def print_e32_config (received_data):
     print('Выходная мощность:\t' + str(output_power))
 
 def gpio_init ():
-    GPIO.setboard(GPIO.REPKAPI3)
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
     M0 = 22
@@ -74,9 +93,12 @@ def gpio_init ():
     GPIO.output(M0,GPIO.HIGH)
     GPIO.output(M1,GPIO.HIGH)
     time.sleep(1)
-
-    #ser = serial.Serial("/dev/serial0", 9600)
-    ser = serial.Serial("/dev/ttyS0", 9600)
+    
+    if board_type == 'Repka-Pi':
+        ser = serial.Serial("/dev/ttyS0", 9600, timeout=1)
+    elif board_type == 'Raspberry Pi':
+        ser = serial.Serial("/dev/serial0", 9600, timeout=1)    
+   
     ser.flushInput()
     return ser
 
