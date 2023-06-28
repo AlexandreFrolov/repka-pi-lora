@@ -65,7 +65,7 @@ def wait_for_serial_data(serial):
         sleep(0.4)
 
 
-def send_cmd(address):
+def send_cmd(ser, address):
     try :
         if ser.isOpen() :
             wait_for_aux_pin()
@@ -110,11 +110,11 @@ def format_node_data(node, node_data):
         i = i+1
     return node_dict
 
-def get_nodes_data():
+def get_nodes_data(ser):
     nodes_dict={}
-    node_data0 = send_cmd(b'\x00\x0B\x0F')
-    node_data1 = send_cmd(b'\x00\x0C\x0F')
-    node_data2 = send_cmd(b'\x00\x0D\x0F')
+    node_data0 = send_cmd(ser, b'\x00\x0B\x0F')
+    node_data1 = send_cmd(ser, b'\x00\x0C\x0F')
+    node_data2 = send_cmd(ser, b'\x00\x0D\x0F')
 
     nodes_dict[0] = format_node_data(0, node_data0)
     nodes_dict[1] = format_node_data(1, node_data1)
@@ -128,5 +128,5 @@ def save_nodes_data_to_file(nodes_dict):
         json.dump(nodes_dict, f, indent=2, ensure_ascii=False)
 
 ser = gpio_init()
-nodes_dict = get_nodes_data()
+nodes_dict = get_nodes_data(ser)
 save_nodes_data_to_file(nodes_dict)
