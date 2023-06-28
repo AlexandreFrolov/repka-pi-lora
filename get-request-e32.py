@@ -21,6 +21,7 @@ if board_type == 'Repka-Pi':
     GPIO.setboard(GPIO.REPKAPI3)
 elif board_type == 'Raspberry Pi':
     import RPi.GPIO as GPIO
+    import psutil
 
 print(board_type + "\n")
 
@@ -29,19 +30,27 @@ import time
 import sys
 from time import sleep
 import json
+import subprocess
+
 
 NODE_ADDR_CHAN = [b'\x00\x0B\x0F',
                   b'\x00\x0C\x0F',
                   b'\x00\x0D\x0F',
                   b'\x00\x0E\x0F']
 
-
+def wait_for_aux_pin():
+    AUX = 18
+    while not GPIO.input(AUX):
+        sleep(0.04)
+        
 def gpio_init ():
 #    GPIO.setboard(GPIO.REPKAPI3)
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
     M0 = 22
     M1 = 27
+    AUX = 18
+    GPIO.setup(AUX,GPIO.IN)    
     GPIO.setup(M0,GPIO.OUT)
     GPIO.setup(M1,GPIO.OUT)
     GPIO.output(M0,GPIO.LOW)
@@ -49,17 +58,29 @@ def gpio_init ():
     time.sleep(1)
     
     if board_type == 'Repka-Pi':
-        ser = serial.Serial("/dev/ttyS0", 9600, timeout=1)
+        ser = serial.Serial("/dev/ttyS0", 9600, timeout=5)
     elif board_type == 'Raspberry Pi':
-        ser = serial.Serial("/dev/serial0", 9600, timeout=1)
+        ser = serial.Serial("/dev/serial0", 9600, timeout=5)
     
     ser.flushInput()
     print(ser.name)
     return ser
 
+def get_sensor_temperatures():
 
-def wait_for_cmd(node):
-    print('return data to node: ' + str(NODE_ADDR_CHAN[node]))
+    output = subprocess.check_output(["sensors", "-j"])
+    sensor_data = json.loads(output)
+    if board_type == 'Repka-Pi':
+        cpu_temp = sensor_data["cpu_thermal-virtual-0"]["temp1"]["temp1_input"]
+        gpu_temp = sensor_data["gpu_thermal-virtual-0"]["temp1"]["temp1_input"]
+
+    elif board_type == 'Raspberry Pi':
+        cpu_temp = sensor_data["cpu_thermal-virtual-0"]["temp1"]["temp1_input"]
+        gpu_temp = 0
+    return f"{int(cpu_temp)};{int(gpu_temp)}       \r\n"
+        
+def wait_for_cmd(address):
+    print('return data to node: ' + str(address))
     try :
         while True:
             received_data = ser.readline()
@@ -68,18 +89,20 @@ def wait_for_cmd(node):
             received_data += ser.read(data_left)
             rec = received_data.decode("utf-8").strip()
             if received_data:
-              print(received_data)
               print(rec)
             else:
-              print('.', end='')
+              print('.', end='', flush=True)
         
             if 'getData' in rec:
+                temperature_data = get_sensor_temperatures()
+                print(temperature_data.encode())
+                s_data = temperature_data.encode()
+#                s_data = '111;222     \r\n'.encode()
                 if ser.isOpen() :
-                    ser.write(NODE_ADDR_CHAN[node])
-                    s_data = '111;222;333;444\r\n'.encode()
+                    wait_for_aux_pin()
+                    ser.write(address)
+                    wait_for_aux_pin()
                     ser.write(s_data)
-#                    ser.write('111;222;333;444 \r\n')
-                    print('Sended')
                     print(s_data)
     except :
         if ser.isOpen() :
@@ -88,5 +111,14 @@ def wait_for_cmd(node):
     return
 
 print(serial.__version__)
+
 ser = gpio_init()
-wait_for_cmd(3)
+
+temperature_data = get_sensor_temperatures()
+print(temperature_data.encode())
+s_data = temperature_data.encode()
+print(s_data)
+
+
+
+wait_for_cmd(b'\x00\x0E\x0F')

@@ -53,37 +53,37 @@ def gpio_init ():
         ser = serial.Serial("/dev/serial0", 9600, timeout=1)
     
     ser.flushInput()
-    print(ser.name)
+#    print(ser.name)
     return ser
 
 def wait_for_serial_data(serial):
     while serial.inWaiting() == 0:
         sleep(0.4)
 
-def send_cmd(node):
+def send_cmd(address):
     try :
         if ser.isOpen() :
-            ser.write(NODE_ADDR_CHAN[node])
+            ser.write(address)
             ser.write('getData \n'.encode())
-            print('Sended')
     except :
         if ser.isOpen() :
             ser.close()
             GPIO.cleanup()
 
-    print('in Waiting: ' + str(ser.inWaiting()));
-#    wait_for_serial_data(ser)
-
+    print('Sended to :' + str(address))
+    
     received_data = ser.readline()
-    sleep(0.03)
+    sleep(0.05)
     data_left = ser.inWaiting() 
     received_data += ser.read(data_left)
 
     rec = received_data.decode("utf-8").strip()
-    
-    print(received_data)
+    print('Received: ' + received_data.decode('utf-8') + "\n")
     
     node_data = rec.split(';')
+    
+    print(node_data)
+    
     return node_data
 
 def format_node_data(node, node_data):
@@ -92,12 +92,13 @@ def format_node_data(node, node_data):
                   'Влажность',
                   'Точка росы']
     NODE_3_ITEMS = ['Температура CPU',
-                  'Интенсивность освещения']
+                  'Температура GPU',
+                  'Резерв']
     node_dict={}
     i=0
     for val in node_data:
         val = str(val)
-        if(node == 0 or node == 1 or node == 2):
+        if(node == 0 or node == 1):
             node_dict[NODE_1_2_ITEMS[i]]= val
         else:
             node_dict[NODE_3_ITEMS[i]]= val
@@ -106,9 +107,13 @@ def format_node_data(node, node_data):
 
 def get_nodes_data():
     nodes_dict={}
-    for node in 0,1,2:
-        node_data = send_cmd(node)
-        nodes_dict[node] = format_node_data(node, node_data)
+    node_data0 = send_cmd(b'\x00\x0B\x0F')
+    node_data1 = send_cmd(b'\x00\x0C\x0F')
+    node_data2 = send_cmd(b'\x00\x0D\x0F')
+
+    nodes_dict[0] = format_node_data(0, node_data0)
+    nodes_dict[1] = format_node_data(1, node_data1)
+    nodes_dict[2] = format_node_data(2, node_data2)
     return nodes_dict
 
 def save_nodes_data_to_file(nodes_dict):
@@ -117,7 +122,7 @@ def save_nodes_data_to_file(nodes_dict):
     with open('hosts_data.json', 'w') as f:
         json.dump(nodes_dict, f, indent=2, ensure_ascii=False)
 
-print(serial.__version__)
+# print(serial.__version__)
 ser = gpio_init()
 nodes_dict = get_nodes_data()
 save_nodes_data_to_file(nodes_dict)
